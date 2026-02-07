@@ -1,6 +1,9 @@
 import { dispatchSkillCommand } from "./dispatch.js";
 import { readFileSync } from "node:fs";
 import { listAvailableSkills } from "./list.js";
+import { SUPPORTED_EXTENSIONS } from "./discovery.js";
+
+const SUPPORTED_EXTENSIONS_TEXT = SUPPORTED_EXTENSIONS.join(", ");
 
 const HELP_TEXT = `skillx - Run skill scripts from skill directories
 
@@ -13,6 +16,12 @@ Examples:
   skillx my-skill --dry-run
   skillx my-skill do --dry-run
   skillx --list
+
+Entrypoint:
+  main.{py,ts,js}
+
+Supported script extensions:
+  ${SUPPORTED_EXTENSIONS_TEXT}
 `;
 
 export interface CliDependencies {
