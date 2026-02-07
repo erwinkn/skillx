@@ -1,6 +1,6 @@
 {
   "name": "skillx",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI runner for skill scripts across .agent/.agents/.claude/.codex skill directories.",
   "type": "module",
   "main": "./dist/index.mjs",
