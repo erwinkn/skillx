@@ -19,15 +19,91 @@ afterEach(() => {
 });
 
 describe("resolveExecutionPlan", () => {
-  test("maps TypeScript files to node + tsx", () => {
+  test("prefers bun for TypeScript files", () => {
     const plan = resolveExecutionPlan("/tmp/main.ts", ["sync", "--dry-run"], {
+      commandExists: (cmd) => cmd === "bun" || cmd === "tsx",
+      commandVersion: () => "v25.6.0",
       nodePath: "/node/bin/node",
-      tsxCliPath: "/deps/tsx/cli.mjs",
+    });
+
+    expect(plan).toEqual({
+      command: "bun",
+      args: ["/tmp/main.ts", "sync", "--dry-run"],
+    });
+  });
+
+  test("uses node for TypeScript files when native support is available", () => {
+    const plan = resolveExecutionPlan("/tmp/main.ts", ["sync", "--dry-run"], {
+      commandExists: (cmd) => cmd === "tsx",
+      commandVersion: (cmd) => (cmd === "/node/bin/node" ? "v25.6.0" : null),
+      nodePath: "/node/bin/node",
     });
 
     expect(plan).toEqual({
       command: "/node/bin/node",
-      args: ["/deps/tsx/cli.mjs", "/tmp/main.ts", "sync", "--dry-run"],
+      args: ["/tmp/main.ts", "sync", "--dry-run"],
+    });
+  });
+
+  test("falls back to tsx when bun is unavailable and node lacks native support", () => {
+    const plan = resolveExecutionPlan("/tmp/main.ts", ["sync", "--dry-run"], {
+      commandExists: (cmd) => cmd === "tsx",
+      commandVersion: (cmd) => (cmd === "/node/bin/node" ? "v20.10.0" : null),
+      nodePath: "/node/bin/node",
+    });
+
+    expect(plan).toEqual({
+      command: "tsx",
+      args: ["/tmp/main.ts", "sync", "--dry-run"],
+    });
+  });
+
+  test("falls back to ts-node when bun, node, and tsx are unavailable", () => {
+    const plan = resolveExecutionPlan("/tmp/main.ts", ["sync"], {
+      commandExists: (cmd) => cmd === "ts-node",
+      commandVersion: (cmd) => (cmd === "/node/bin/node" ? "v20.10.0" : null),
+      nodePath: "/node/bin/node",
+    });
+
+    expect(plan).toEqual({
+      command: "ts-node",
+      args: ["/tmp/main.ts", "sync"],
+    });
+  });
+
+  test("falls back to deno when other TypeScript runners are unavailable", () => {
+    const plan = resolveExecutionPlan("/tmp/main.ts", ["sync"], {
+      commandExists: (cmd) => cmd === "deno",
+      commandVersion: (cmd) => (cmd === "/node/bin/node" ? "v20.10.0" : null),
+      nodePath: "/node/bin/node",
+    });
+
+    expect(plan).toEqual({
+      command: "deno",
+      args: ["run", "/tmp/main.ts", "sync"],
+    });
+  });
+
+  test("throws explicit supported runner error when no TypeScript runner exists", () => {
+    expect(() =>
+      resolveExecutionPlan("/tmp/main.ts", [], {
+        commandExists: () => false,
+        commandVersion: (cmd) => (cmd === "/node/bin/node" ? "v20.10.0" : null),
+        nodePath: "/node/bin/node",
+      }),
+    ).toThrow(
+      "Supported TypeScript runners: bun, node (v22.18+, v23+, or v24.3+), tsx, ts-node, deno.",
+    );
+  });
+
+  test("maps JavaScript files to node", () => {
+    const plan = resolveExecutionPlan("/tmp/main.js", ["--dry-run"], {
+      nodePath: "/node/bin/node",
+    });
+
+    expect(plan).toEqual({
+      command: "/node/bin/node",
+      args: ["/tmp/main.js", "--dry-run"],
     });
   });
 

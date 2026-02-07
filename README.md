@@ -56,9 +56,11 @@ Within a matched skill directory:
 ## Supported script targets
 
 - `.js`, `.mjs`, `.cjs` -> `node`
-- `.ts`, `.mts`, `.cts` -> bundled `tsx`
+- `.ts`, `.mts`, `.cts` -> `bun` (preferred), then `node` (native TS support), `tsx`, `ts-node`, `deno`
 - `.py` -> `uv run` (preferred), fallback `python3`
 - `.sh` -> `bash`
 - executable files with a shebang (`#!...`) -> executed directly
+
+Node native TypeScript execution is used when Node supports it (`v22.18+`, `v23+`, or `v24.3+`).
 
 All args are forwarded unchanged.

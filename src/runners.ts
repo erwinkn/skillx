@@ -1,13 +1,10 @@
-import { createRequire } from "node:module";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { isExecutableWithShebang } from "./discovery.js";
 
-const require = createRequire(import.meta.url);
-
 export interface RunnerDependencies {
   commandExists?: (command: string) => boolean;
-  tsxCliPath?: string;
+  commandVersion?: (command: string) => string | null;
   nodePath?: string;
 }
 
@@ -54,6 +51,7 @@ export function resolveExecutionPlan(
   dependencies: RunnerDependencies = {},
 ): ExecutionPlan {
   const commandExists = dependencies.commandExists ?? defaultCommandExists;
+  const commandVersion = dependencies.commandVersion ?? defaultCommandVersion;
   const nodePath = dependencies.nodePath ?? process.execPath;
   const extension = path.extname(scriptPath).toLowerCase();
 
@@ -62,8 +60,36 @@ export function resolveExecutionPlan(
   }
 
   if ([".ts", ".mts", ".cts"].includes(extension)) {
-    const tsxCliPath = dependencies.tsxCliPath ?? require.resolve("tsx/dist/cli.mjs");
-    return { command: nodePath, args: [tsxCliPath, scriptPath, ...scriptArgs] };
+    if (commandExists("bun")) {
+      return { command: "bun", args: [scriptPath, ...scriptArgs] };
+    }
+
+    const nodeVersion = commandVersion(nodePath);
+    if (nodeVersion && supportsNativeNodeTypeScript(nodeVersion)) {
+      return { command: nodePath, args: [scriptPath, ...scriptArgs] };
+    }
+
+    if (commandExists("tsx")) {
+      return { command: "tsx", args: [scriptPath, ...scriptArgs] };
+    }
+
+    if (commandExists("ts-node")) {
+      return { command: "ts-node", args: [scriptPath, ...scriptArgs] };
+    }
+
+    if (commandExists("deno")) {
+      return { command: "deno", args: ["run", scriptPath, ...scriptArgs] };
+    }
+
+    throw new RunnerError(
+      [
+        "No supported TypeScript runner found for .ts script.",
+        `Supported TypeScript runners: bun, node (v22.18+, v23+, or v24.3+), tsx, ts-node, deno.`,
+        nodeVersion
+          ? `Detected node version: ${nodeVersion}.`
+          : `Node version could not be detected from '${nodePath}'.`,
+      ].join(" "),
+    );
   }
 
   if (extension === ".py") {
@@ -95,9 +121,47 @@ export function resolveExecutionPlan(
 }
 
 function defaultCommandExists(command: string): boolean {
+  return defaultCommandVersion(command) !== null;
+}
+
+function defaultCommandVersion(command: string): string | null {
   const result = spawnSync(command, ["--version"], {
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
+    encoding: "utf8",
   });
 
-  return !result.error;
+  if (result.error || result.status !== 0) {
+    return null;
+  }
+
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+  return output.length > 0 ? output : null;
+}
+
+function supportsNativeNodeTypeScript(version: string): boolean {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(version.trim());
+  if (!match) {
+    return false;
+  }
+
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+
+  if (major > 24) {
+    return true;
+  }
+
+  if (major === 24) {
+    return minor >= 3;
+  }
+
+  if (major === 23) {
+    return true;
+  }
+
+  if (major === 22) {
+    return minor >= 18;
+  }
+
+  return false;
 }
