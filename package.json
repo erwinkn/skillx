@@ -2,6 +2,10 @@
   "name": "skillx",
   "version": "0.1.2",
   "description": "CLI runner for skill scripts across .agent/.agents/.claude/.codex skill directories.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/erwinkn/skillx"
+  },
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
