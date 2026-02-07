@@ -1,11 +1,15 @@
 # skillx
 
-`skillx` is a CLI that runs scripts from skill directories.
+`skillx` makes your skill scripts executable.
+
+It streamlines local skill development by making skill scripts directly invokable. Instead of publishing a package or repeatedly running long commands such as `bun ~/.agents/skills/my-skill/scripts/script.ts ...`, define a `main.{ts,js,py,sh}` entrypoint and run `skillx my-skill ...` from anywhere.
 
 ## Install
 
 ```bash
 npm i -g skillx
+pnpm i -g skillx
+bun i -g skillx
 ```
 
 ## Usage
