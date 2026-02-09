@@ -1,8 +1,11 @@
 # skillx
 
-`skillx` makes your skill scripts executable.
+`skillx` makes scripts in a skill's `scripts/` directory executable by convention:
 
-It streamlines local skill development by making skill scripts directly invokable. Instead of publishing a package or repeatedly running long commands such as `bun ~/.agents/skills/my-skill/scripts/script.ts ...`, define a `main.{ts,js,py,sh}` entrypoint and run `skillx my-skill ...` from anywhere.
+- `scripts/main.{ts,js,py,sh}` -> `skillx <skill> ...`
+- `scripts/<command>.{ts,js,py,sh}` -> `skillx <skill> <command> ...`
+
+If `scripts/<command>.*` is missing, `skillx` falls back to `scripts/main.*` and passes `<command>` as the first argument.
 
 ## Install
 
