@@ -1,6 +1,6 @@
 {
   "name": "skillx",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "CLI runner for skill scripts across .agent/.agents/.claude/.codex skill directories.",
   "repository": {
     "type": "git",
