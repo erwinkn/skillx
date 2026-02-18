@@ -21,6 +21,8 @@ bun i -g skillx
 skillx <skill> [args...]
 skillx <skill> <script-name> [args...]
 skillx --list
+skillx --add-path <skill> <path>
+skillx --add-root <path>
 ```
 
 Examples:
@@ -29,6 +31,8 @@ Examples:
 skillx my-skill --dry-run
 skillx my-skill do --dry-run
 skillx --list
+skillx --add-path my-skill ~/Code/my-skill
+skillx --add-root ~/Code/my-skills
 ```
 
 `skillx --list` prints available skill names that have executable scripts.
@@ -37,15 +41,48 @@ skillx --list
 
 When you run `skillx <skill> ...`, skill directories are checked in this order:
 
-1. `<git-repo-root>/.agents/skill/<skill>`
-2. `<git-repo-root>/.agent/skills/<skill>`
-3. `<git-repo-root>/.agents/skills/<skill>`
-4. `<git-repo-root>/.claude/skills/<skill>`
-5. `<git-repo-root>/.codex/skills/<skill>`
-6. `~/.agents/skills/<skill>` (or `$SCRIPT_SKILLS_HOME/<skill>` if set)
-7. `~/.agent/skills/<skill>`
-8. `~/.claude/skills/<skill>` (or `$SCRIPT_CLAUDE_SKILLS_HOME/<skill>` if set)
-9. `$CODEX_HOME/skills/<skill>` (fallback `~/.codex/skills/<skill>`)
+1. Custom skill path from config (`~/.skillx/config.json`, or `$SKILLX_CONFIG`)
+2. Custom skills roots from config (`skillRoots` list)
+3. `<git-repo-root>/.agents/skill/<skill>`
+4. `<git-repo-root>/.agent/skills/<skill>`
+5. `<git-repo-root>/.agents/skills/<skill>`
+6. `<git-repo-root>/.claude/skills/<skill>`
+7. `<git-repo-root>/.codex/skills/<skill>`
+8. `<git-repo-root>/skills/<skill>` (OpenClaw workspace skills)
+9. `~/.agents/skills/<skill>` (or `$SCRIPT_SKILLS_HOME/<skill>` if set)
+10. `~/.agent/skills/<skill>`
+11. `~/.claude/skills/<skill>` (or `$SCRIPT_CLAUDE_SKILLS_HOME/<skill>` if set)
+12. `~/.openclaw/skills/<skill>` (or `$SCRIPT_OPENCLAW_SKILLS_HOME/<skill>` if set, using `$OPENCLAW_STATE_DIR` or `$OPENCLAW_HOME` when present)
+13. `$CODEX_HOME/skills/<skill>` (fallback `~/.codex/skills/<skill>`)
+
+## Custom skill path config
+
+Set a custom location for a specific skill:
+
+```bash
+skillx --add-path <skill> <path>
+```
+
+Add an entire skills folder (containing many `<skill>/scripts/...` directories):
+
+```bash
+skillx --add-root <path>
+```
+
+By default, mappings are saved to `~/.skillx/config.json`:
+
+```json
+{
+  "skillPaths": {
+    "my-skill": "/absolute/path/to/my-skill"
+  },
+  "skillRoots": [
+    "/absolute/path/to/my-skills"
+  ]
+}
+```
+
+Use `$SKILLX_CONFIG` to store this config file elsewhere.
 
 ## Script dispatch behavior
 

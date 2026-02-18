@@ -2,6 +2,7 @@ import path from "node:path";
 import { readdirSync } from "node:fs";
 import { findScriptForBase, isDirectory, listAvailableCommands } from "./discovery.js";
 import { getSkillSearchRoots, type ResolveContext } from "./resolve.js";
+import { getConfiguredSkillPaths } from "./config.js";
 
 export interface ListedSkill {
   name: string;
@@ -10,8 +11,19 @@ export interface ListedSkill {
 
 export function listAvailableSkills(context: ResolveContext = {}): ListedSkill[] {
   const roots = getSkillSearchRoots(context);
+  const configuredSkillPaths = getConfiguredSkillPaths(context);
   const seen = new Set<string>();
   const skills: ListedSkill[] = [];
+
+  const configuredEntries = Object.entries(configuredSkillPaths).sort(([a], [b]) => a.localeCompare(b));
+  for (const [name, skillRoot] of configuredEntries) {
+    if (seen.has(name) || !hasRunnableScripts(skillRoot)) {
+      continue;
+    }
+
+    seen.add(name);
+    skills.push({ name, root: skillRoot });
+  }
 
   for (const root of roots) {
     if (!isDirectory(root)) {

@@ -2,6 +2,7 @@ import { dispatchSkillCommand } from "./dispatch.js";
 import { readFileSync } from "node:fs";
 import { listAvailableSkills } from "./list.js";
 import { SUPPORTED_EXTENSIONS } from "./discovery.js";
+import { saveSkillPathOverride, saveSkillRoot } from "./config.js";
 
 const SUPPORTED_EXTENSIONS_TEXT = SUPPORTED_EXTENSIONS.join(", ");
 
@@ -11,11 +12,15 @@ Usage:
   skillx <skill> [args...]
   skillx <skill> <script-name> [args...]
   skillx --list
+  skillx --add-path <skill> <path>
+  skillx --add-root <path>
 
 Examples:
   skillx my-skill --dry-run
   skillx my-skill do --dry-run
   skillx --list
+  skillx --add-path my-skill ~/Code/my-skill
+  skillx --add-root ~/Code/my-skills
 
 Entrypoint:
   main.{py,ts,js}
@@ -29,6 +34,8 @@ export interface CliDependencies {
   stderr?: Pick<NodeJS.WriteStream, "write">;
   dispatchSkillCommandImpl?: typeof dispatchSkillCommand;
   listAvailableSkillsImpl?: typeof listAvailableSkills;
+  saveSkillPathOverrideImpl?: typeof saveSkillPathOverride;
+  saveSkillRootImpl?: typeof saveSkillRoot;
 }
 
 export async function main(argv: string[], dependencies: CliDependencies = {}): Promise<number> {
@@ -36,6 +43,8 @@ export async function main(argv: string[], dependencies: CliDependencies = {}): 
   const stderr = dependencies.stderr ?? process.stderr;
   const dispatchSkillCommandImpl = dependencies.dispatchSkillCommandImpl ?? dispatchSkillCommand;
   const listAvailableSkillsImpl = dependencies.listAvailableSkillsImpl ?? listAvailableSkills;
+  const saveSkillPathOverrideImpl = dependencies.saveSkillPathOverrideImpl ?? saveSkillPathOverride;
+  const saveSkillRootImpl = dependencies.saveSkillRootImpl ?? saveSkillRoot;
 
   if (argv.length === 0) {
     stderr.write(HELP_TEXT);
@@ -74,6 +83,60 @@ export async function main(argv: string[], dependencies: CliDependencies = {}): 
       stdout.write(`${skill.name}\n`);
     }
     return 0;
+  }
+
+  if (firstArg === "--add-path") {
+    if (argv.length !== 3) {
+      stderr.write("skillx: --add-path requires exactly <skill> and <path>\n");
+      return 1;
+    }
+
+    const skillName = argv[1];
+    const skillPath = argv[2];
+    if (!skillName || !skillPath) {
+      stderr.write("skillx: --add-path requires exactly <skill> and <path>\n");
+      return 1;
+    }
+
+    if (isInvalidSkillName(skillName)) {
+      stderr.write(`skillx: invalid skill name '${skillName}'\n`);
+      return 1;
+    }
+
+    try {
+      const saved = saveSkillPathOverrideImpl(skillName, skillPath);
+      stdout.write(`Saved custom path for '${skillName}' -> ${saved.resolvedSkillPath}\n`);
+      stdout.write(`Config: ${saved.configPath}\n`);
+      return 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "failed to save custom skill path";
+      stderr.write(`skillx: ${message}\n`);
+      return 1;
+    }
+  }
+
+  if (firstArg === "--add-root") {
+    if (argv.length !== 2) {
+      stderr.write("skillx: --add-root requires exactly <path>\n");
+      return 1;
+    }
+
+    const skillRoot = argv[1];
+    if (!skillRoot) {
+      stderr.write("skillx: --add-root requires exactly <path>\n");
+      return 1;
+    }
+
+    try {
+      const saved = saveSkillRootImpl(skillRoot);
+      stdout.write(`Saved custom skills root -> ${saved.resolvedSkillRoot}\n`);
+      stdout.write(`Config: ${saved.configPath}\n`);
+      return 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "failed to save custom skills root";
+      stderr.write(`skillx: ${message}\n`);
+      return 1;
+    }
   }
 
   if (isInvalidSkillName(firstArg)) {
